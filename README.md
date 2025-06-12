@@ -40,4 +40,4 @@ All system diagrams are in [diagrams/](./diagrams/).
 
 ## Frontend web project scafolding
 
-All system diagrams are in [diagrams/](./diagrams/).
+All system diagrams are in [frontend/](./frontend/).

@@ -1,0 +1,252 @@
+
+# Data Flow Models and API Design
+
+This document provides a detailed breakdown of **data flow models** for each feature, along with the **API model** and guidelines for designing a **performant API** for the system.
+
+---
+
+## **1. Data Flow Models for Each Feature**
+
+### **Feature 1: Real-Time Dashboard**
+**Purpose**: Display real-time metrics and security health updates.
+
+**Data Flow**:
+1. **Frontend**:
+   - User logs in and navigates to the dashboard.
+   - The frontend sends an API request to fetch initial metrics (e.g., app usage, policy violations).
+   - A WebSocket connection is established for real-time updates.
+2. **Backend**:
+   - The `APP_USAGE` table is queried to fetch app usage logs.
+   - The `POLICY_RULE` table is queried to check for violations.
+   - Real-time updates are pushed to the frontend via WebSocket.
+3. **External Systems**:
+   - Data from `CELL_TOWER` and `TOWER_CARRIER` is ingested into the backend.
+
+**Entities Involved**:
+- `USER`, `DEVICE`, `APP_USAGE`, `APP`, `CELL_TOWER`, `POLICY_RULE`
+
+---
+
+### **Feature 2: Device Auto-Discovery**
+**Purpose**: Automatically detect and onboard new enterprise devices.
+
+**Data Flow**:
+1. **Frontend**:
+   - Periodically polls the backend or listens for WebSocket updates for newly discovered devices.
+   - Displays the list of discovered devices in the UI.
+2. **Backend**:
+   - The `DEVICE` table is updated with new devices detected by `CELL_TOWER`.
+   - The `OS` table is referenced to associate the operating system with the device.
+   - Sends updates to the frontend via WebSocket or API.
+3. **External Systems**:
+   - `CELL_TOWER` sends device discovery data to the backend.
+
+**Entities Involved**:
+- `DEVICE`, `OS`, `CELL_TOWER`, `LOCATION`
+
+---
+
+### **Feature 3: Policy Enforcement**
+**Purpose**: Enforce role-based policies to allow or deny actions.
+
+**Data Flow**:
+1. **Frontend**:
+   - Fetches policies from the backend based on the user's role.
+   - Validates user actions against the policies.
+2. **Backend**:
+   - The `POLICY_RULE` table is queried to fetch rules for the user's role and app.
+   - The `ACTION` table is referenced to determine allowed or denied actions.
+3. **External Systems**:
+   - Policies may be enforced at the `CELL_TOWER` level for edge security.
+
+**Entities Involved**:
+- `USER`, `ROLE`, `POLICY`, `POLICY_RULE`, `APP`, `ACTION`
+
+---
+
+### **Feature 4: Auto-Remedial Actions**
+**Purpose**: Automatically take corrective actions based on alerts.
+
+**Data Flow**:
+1. **Frontend**:
+   - Displays notifications about auto-remedial actions taken by the system.
+2. **Backend**:
+   - The `PLAN` table is checked to verify if the enterprise has subscribed to auto-remedial actions.
+   - The `POLICY_RULE` table is queried to determine the appropriate action.
+   - The `CELL_TOWER` is updated to enforce the action.
+3. **External Systems**:
+   - `CELL_TOWER` executes the remedial actions (e.g., blocking a device or app).
+
+**Entities Involved**:
+- `PLAN`, `ENTERPRISE`, `POLICY_RULE`, `CELL_TOWER`, `ACTION`
+
+---
+
+## **2. API Model**
+
+### **API Endpoints**
+
+#### **Authentication**
+- `POST /auth/login`: Authenticate a user and return a token.
+- `POST /auth/refresh`: Refresh the authentication token.
+
+#### **Dashboard**
+- `GET /dashboard/metrics`: Fetch initial dashboard metrics (e.g., app usage, policy violations).
+- `GET /dashboard/alerts`: Fetch security alerts.
+
+#### **Devices**
+- `GET /devices`: Fetch registered devices.
+- `POST /devices`: Register a new device.
+- `GET /devices/discovered`: Fetch auto-discovered devices.
+
+#### **Policies**
+- `GET /policies`: Fetch policies for the user or role.
+- `POST /policies`: Create or update a policy.
+
+#### **Policy Rules**
+- `GET /policy-rules`: Fetch policy rules for a specific policy.
+- `POST /policy-rules`: Add or update a policy rule.
+
+#### **Carriers and Towers**
+- `GET /carriers`: Fetch supported carriers.
+- `GET /towers`: Fetch tower information.
+
+#### **Real-Time Alerts**
+- WebSocket endpoint: `/ws/alerts`: Subscribe to real-time alerts.
+
+---
+
+### **API Request/Response Examples**
+
+#### **1. Fetch Dashboard Metrics**
+**Request**:
+```http
+GET /dashboard/metrics HTTP/1.1
+Authorization: Bearer <token>
+```
+
+**Response**:
+```json
+{
+  "app_usage": [
+    {
+      "app_id": "app123",
+      "app_name": "Slack",
+      "usage_count": 150
+    },
+    {
+      "app_id": "app124",
+      "app_name": "Zoom",
+      "usage_count": 200
+    }
+  ],
+  "policy_violations": [
+    {
+      "policy_rule_id": "rule123",
+      "app_name": "Slack",
+      "action": "Upload File",
+      "violations": 5
+    }
+  ]
+}
+```
+
+---
+
+#### **2. Fetch Auto-Discovered Devices**
+**Request**:
+```http
+GET /devices/discovered HTTP/1.1
+Authorization: Bearer <token>
+```
+
+**Response**:
+```json
+{
+  "devices": [
+    {
+      "id": "device123",
+      "model": "iPhone 13",
+      "os": "iOS",
+      "status": "discovered"
+    },
+    {
+      "id": "device124",
+      "model": "Samsung Galaxy S21",
+      "os": "Android",
+      "status": "discovered"
+    }
+  ]
+}
+```
+
+---
+
+#### **3. Fetch Policies for a Role**
+**Request**:
+```http
+GET /policies?role_id=role123 HTTP/1.1
+Authorization: Bearer <token>
+```
+
+**Response**:
+```json
+{
+  "policies": [
+    {
+      "policy_id": "policy123",
+      "name": "Admin Policy",
+      "rules": [
+        {
+          "app_name": "Slack",
+          "action": "Upload File",
+          "permission": "deny"
+        },
+        {
+          "app_name": "Zoom",
+          "action": "Start Meeting",
+          "permission": "allow"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## **3. Designing a Performant API**
+
+### **Key Strategies**
+
+1. **Optimize Database Queries**:
+   - Use indexes for frequently queried fields (e.g., `user_id`, `device_id`, `policy_id`).
+   - Avoid N+1 query problems by using joins or batch queries.
+
+2. **Caching**:
+   - Cache frequently accessed data (e.g., policies, app usage) using tools like **Redis**.
+   - Use `ETag` headers for client-side caching.
+
+3. **Asynchronous Processing**:
+   - Offload heavy tasks (e.g., auto-remedial actions) to background workers using a message queue (e.g., RabbitMQ, Kafka).
+
+4. **WebSocket for Real-Time Updates**:
+   - Use WebSocket for pushing real-time alerts instead of polling.
+   - Ensure WebSocket connections are load-balanced and scalable.
+
+5. **Rate Limiting**:
+   - Implement rate limiting to prevent abuse.
+   - Example: Allow 100 requests per minute per user.
+
+6. **Pagination**:
+   - For large datasets (e.g., devices, app usage), implement pagination using query parameters:
+     - Example: `GET /devices?page=1&limit=20`.
+
+7. **API Gateway**:
+   - Use an API gateway (e.g., AWS API Gateway, Kong) for centralized authentication, rate limiting, and monitoring.
+
+---
+
+This document provides a comprehensive overview of the **data flow models**, **API model**, and strategies for designing a **performant API** for the system.
+
+--- 

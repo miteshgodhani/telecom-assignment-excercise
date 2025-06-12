@@ -22,7 +22,7 @@ See [frontend-architecture.md](./frontend-architecture.md) for a detailed overvi
 
 ## Technologies Used
 
-- React, TypeScript, Tailwind CSS
+- React, TypeScript, Tailwind CSS, React Native(for mobile)
 - Redux Toolkit, RTK Query, React Query
 - Webpack
 - Lerna - Monorepo tool
@@ -32,20 +32,12 @@ See [frontend-architecture.md](./frontend-architecture.md) for a detailed overvi
 
 ## API Models
 
-OpenAPI/Swagger documentation is in [api/openapi.yaml](./api/openapi.yaml).
+API model documentation is in [api/data-model](./api/data-flow-api-model.md).
 
 ## Data Flows & Diagrams
 
 All system diagrams are in [diagrams/](./diagrams/).
 
-## Getting Started
+## Frontend web project scafolding
 
-Instructions for setup and running the frontend (link to `frontend/` if included).
-
-## Contributing
-
-Guidelines for collaboration and code review.
-
-## License
-
-MIT
+All system diagrams are in [diagrams/](./diagrams/).
